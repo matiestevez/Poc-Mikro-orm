@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MikroORM - Lista de Tareas</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; }
+        h1 { text-align: center; }
+        #task-form { display: flex; gap: 10px; margin-bottom: 20px; }
+        #task-input { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        #task-list { list-style: none; padding: 0; }
+        .task-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+        .task-item.completed { text-decoration: line-through; color: #888; }
+        .task-actions { display: flex; gap: 10px; }
+        .delete-btn { background-color: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <h1>Lista de Tareas</h1>
+    
+    <form id="task-form">
+        <input type="text" id="task-input" placeholder="Añadir nueva tarea..." required>
+        <button type="submit">Añadir</button>
+    </form>
+
+    <ul id="task-list">
+        </ul>
+
+    <script>
+        const API_URL = 'http://localhost:3001/tasks';
+        const taskForm = document.getElementById('task-form');
+        const taskInput = document.getElementById('task-input');
+        const taskList = document.getElementById('task-list');
+
+        // Función para obtener y mostrar las tareas
+        async function fetchTasks() {
+            const response = await fetch(API_URL);
+            const tasks = await response.json();
+            renderTasks(tasks);
+        }
+
+        // Función para renderizar las tareas en la lista
+        function renderTasks(tasks) {
+            taskList.innerHTML = ''; // Limpia la lista
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.className = 'task-item';
+                if (task.completed) {
+                    li.classList.add('completed');
+                }
+                li.dataset.id = task.id;
+
+                li.innerHTML = `
+                    <span>
+                        <input type="checkbox" ${task.completed ? 'checked' : ''}>
+                        ${task.title}
+                    </span>
+                    <div class="task-actions">
+                        <button class="delete-btn">Eliminar</button>
+                    </div>
+                `;
+                taskList.appendChild(li);
+            });
+        }
+
+        // Manejar el envío del formulario para crear una tarea
+        taskForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = taskInput.value.trim();
+            if (!title) return;
+
+            await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title }),
+            });
+            
+            taskInput.value = ''; // Limpia el input
+            fetchTasks(); // Vuelve a cargar la lista de tareas
+        });
+
+        // Manejar clics en los checkboxes y botones de eliminar
+        taskList.addEventListener('click', async (e) => {
+            const li = e.target.closest('.task-item');
+            if (!li) return;
+            const taskId = li.dataset.id;
+
+            if (e.target.type === 'checkbox') {
+                const completed = e.target.checked;
+                await fetch(`${API_URL}/${taskId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ completed }),
+                });
+                li.classList.toggle('completed'); // Alterna la clase para tachar el texto
+            }
+
+            if (e.target.classList.contains('delete-btn')) {
+                await fetch(`${API_URL}/${taskId}`, {
+                    method: 'DELETE',
+                });
+                fetchTasks(); // Vuelve a cargar la lista de tareas
+            }
+        });
+
+        // Cargar las tareas al iniciar
+        fetchTasks();
+    </script>
+
+</body>
+</html>
