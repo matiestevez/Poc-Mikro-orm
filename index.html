@@ -14,25 +14,59 @@
         .task-item.completed { text-decoration: line-through; color: #888; }
         .task-actions { display: flex; gap: 10px; }
         .delete-btn { background-color: #dc3545; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
+        #buscar-form { display: flex; gap: 10px; margin-bottom: 20px; }
+        #buscar-input { width: 100px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        #buscar-resultado { background: #f8f8f8; padding: 10px; border-radius: 4px; margin-bottom: 20px; min-height: 24px; }
     </style>
 </head>
 <body>
 
     <h1>Lista de Tareas</h1>
+
+    <!-- Formulario para buscar tarea por ID -->
+    <form id="buscar-form">
+        <input type="number" id="buscar-input" placeholder="ID de tarea" min="1" required>
+        <button type="submit">Buscar por ID</button>
+    </form>
+    <div id="buscar-resultado"></div>
     
     <form id="task-form">
         <input type="text" id="task-input" placeholder="Añadir nueva tarea..." required>
         <button type="submit">Añadir</button>
     </form>
 
-    <ul id="task-list">
-        </ul>
+    <ul id="task-list"></ul>
 
     <script>
         const API_URL = 'http://localhost:3001/tasks';
         const taskForm = document.getElementById('task-form');
         const taskInput = document.getElementById('task-input');
         const taskList = document.getElementById('task-list');
+
+        // --- NUEVO: Elementos para buscar por ID ---
+        const buscarForm = document.getElementById('buscar-form');
+        const buscarInput = document.getElementById('buscar-input');
+        const buscarResultado = document.getElementById('buscar-resultado');
+
+        // Función para buscar tarea por ID
+        buscarForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = buscarInput.value.trim();
+            if (!id) return;
+            buscarResultado.textContent = 'Buscando...';
+            try {
+                const res = await fetch(`${API_URL}/${id}`);
+                if (!res.ok) {
+                    const error = await res.json();
+                    buscarResultado.textContent = 'Error: ' + (error.error || res.statusText);
+                    return;
+                }
+                const tarea = await res.json();
+                buscarResultado.textContent = `ID: ${tarea.id} | ${tarea.title} | Completada: ${tarea.completed ? 'Sí' : 'No'}`;
+            } catch (err) {
+                buscarResultado.textContent = 'Error de conexión con el servidor';
+            }
+        });
 
         // Función para obtener y mostrar las tareas
         async function fetchTasks() {
@@ -43,28 +77,27 @@
 
         // Función para renderizar las tareas en la lista
         function renderTasks(tasks) {
-            taskList.innerHTML = ''; // Limpia la lista
-            tasks.forEach(task => {
-                const li = document.createElement('li');
-                li.className = 'task-item';
-                if (task.completed) {
-                    li.classList.add('completed');
-                }
-                li.dataset.id = task.id;
-
-                li.innerHTML = `
-                    <span>
-                        <input type="checkbox" ${task.completed ? 'checked' : ''}>
-                        ${task.title}
-                    </span>
-                    <div class="task-actions">
-                        <button class="delete-btn">Eliminar</button>
-                    </div>
-                `;
-                taskList.appendChild(li);
-            });
+    taskList.innerHTML = ''; // Limpia la lista
+    tasks.forEach(task => {
+        const li = document.createElement('li');
+        li.className = 'task-item';
+        if (task.completed) {
+            li.classList.add('completed');
         }
+        li.dataset.id = task.id;
 
+        li.innerHTML = `
+            <span>
+                <input type="checkbox" ${task.completed ? 'checked' : ''}>
+                <strong>ID: ${task.id}</strong> | ${task.title}
+            </span>
+            <div class="task-actions">
+                <button class="delete-btn">Eliminar</button>
+            </div>
+        `;
+        taskList.appendChild(li);
+    });
+}
         // Manejar el envío del formulario para crear una tarea
         taskForm.addEventListener('submit', async (e) => {
             e.preventDefault();

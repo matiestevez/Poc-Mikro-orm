@@ -27,6 +27,20 @@ let orm: MikroORM;
     }
   });
 
+  // Endpoint para obtener una tarea por su ID
+  app.get('/tasks/:id', async (req: Request, res: Response) => {
+    const em = orm.em.fork();
+    try {
+      const task = await em.findOne(Task, { id: parseInt(req.params.id) });
+      if (!task) {
+        return res.status(404).json({ error: 'Tarea no encontrada.' });
+      }
+      res.status(200).json(task);
+    } catch (error) {
+      res.status(500).json({ error: 'Error al obtener la tarea.' });
+    }
+  });
+
   // Endpoint para crear una nueva tarea
   app.post('/tasks', async (req: Request, res: Response) => {
     const em = orm.em.fork();
